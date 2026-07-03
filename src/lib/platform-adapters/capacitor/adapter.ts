@@ -93,6 +93,15 @@ export class CapacitorAdapter implements PlatformAdapter {
   async migrateDownloads(_src: string, _dst: string): Promise<void> {}
   async getAutoBackupDir(): Promise<string> { return '' }
 
+  async fetchImage(url: string, headers: Record<string, string>): Promise<Blob> {
+    // With the CapacitorHttp plugin enabled (see capacitor.config.ts) window.fetch is patched to
+    // issue the request natively, which bypasses the webview's CORS and cleartext restrictions when
+    // talking to a remote Suwayomi server.
+    const res = await fetch(url, { method: 'GET', headers })
+    if (!res.ok) throw new Error(`${res.status}`)
+    return res.blob()
+  }
+
   async launchServer(_config: ServerLaunchConfig): Promise<void> {}
   async stopServer(): Promise<void> {}
   async getServerStatus(): Promise<'running' | 'stopped' | 'error'> { return 'stopped' }

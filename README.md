@@ -112,6 +112,13 @@ Download the `.dmg` from the [releases page](https://github.com/moku-project/Mok
 > xattr -rd com.apple.quarantine /Applications/Moku.app
 > ```
 
+### Android
+
+Moku runs on Android via [Capacitor](https://capacitorjs.com), reusing the same adaptive frontend.
+Unlike the desktop builds it does **not** bundle a Suwayomi-Server — it connects to an existing
+remote instance you configure under **Settings → General → Server URL**. See
+[docs/ANDROID.md](docs/ANDROID.md) for building and installing.
+
 ---
 
 ## Requirements
@@ -141,13 +148,16 @@ pnpm install
 pnpm tauri:dev
 ```
 
+For the Android build, see [docs/ANDROID.md](docs/ANDROID.md).
+
 ---
 
 ## Stack
 
 | | |
 |---|---|
-| [Tauri v2](https://tauri.app) | Native app shell |
+| [Tauri v2](https://tauri.app) | Desktop app shell |
+| [Capacitor](https://capacitorjs.com) | Android app shell |
 | [Svelte 5](https://svelte.dev) + [SvelteKit 2](https://kit.svelte.dev) + [TypeScript](https://www.typescriptlang.org) | UI |
 | [Vite 8](https://vitejs.dev) | Frontend bundler |
 | [Nixpkgs stdenv](https://nixos.org/manual/nixpkgs/stable/) | Nix builds |
