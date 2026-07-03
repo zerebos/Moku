@@ -47,9 +47,9 @@ Two things make talking to a remote Suwayomi server work from the Android WebVie
 
 ## Building locally
 
-**Prerequisites:** Node + pnpm (see the [main dev setup](../README.md#development)), a JDK (17+),
-and the Android SDK (Platform Tools, `platforms;android-36`, `build-tools;36.0.0`). Android Studio
-is the easiest way to get these.
+**Prerequisites:** Node + pnpm (see the [main dev setup](../README.md#development)), JDK 21 (required
+by Capacitor 8's Android module), and the Android SDK (Platform Tools, `platforms;android-36`,
+`build-tools;36.0.0`). Android Studio is the easiest way to get these.
 
 ```bash
 pnpm install
