@@ -89,6 +89,7 @@ export function configureAuth(
   accessExpiresAt        = null
   authSnoozed            = false
   appState.authRequired  = false
+  appState.authMode      = mode
 }
 
 export function authHeaders(): Record<string, string> {
@@ -144,6 +145,9 @@ export function loginBasic(user: string, pass: string): void {
   config.pass = pass
   config.mode = 'BASIC_AUTH'
   authSnoozed = false
+  // Mirror the effective mode into the reactive app state so image components (Thumbnail, Reader)
+  // know to fetch images through the authenticated blob path rather than a plain <img src>.
+  appState.authMode = 'BASIC_AUTH'
   reportAuthOk()
 }
 
@@ -165,6 +169,7 @@ export async function verifyBasicAuth(user: string, pass: string): Promise<void>
     throw new Error('Invalid credentials')
   }
   authSnoozed = false
+  appState.authMode = 'BASIC_AUTH'
   reportAuthOk()
 }
 
@@ -178,6 +183,7 @@ export async function loginUI(user: string, pass: string): Promise<void> {
   config.mode     = 'UI_LOGIN'
   config.user     = user
   authSnoozed     = false
+  appState.authMode = 'UI_LOGIN'
   reportAuthOk()
 }
 

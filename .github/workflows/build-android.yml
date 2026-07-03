@@ -1,0 +1,76 @@
+name: Build Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g. 0.10.1) — used only to name the artifact"
+        required: false
+        default: "dev"
+  # Build the APK on PRs that touch the mobile app so the Android build stays green.
+  pull_request:
+    paths:
+      - "src/**"
+      - "android/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "vite.config.ts"
+      - "svelte.config.js"
+      - ".github/workflows/build-android.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Capacitor Android (debug APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # Capacitor 8's capacitor-android module compiles against Java 21.
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: pnpm/action-setup@v4
+        with: { version: latest }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Builds the SvelteKit static bundle (MOKU_TARGET=capacitor) and copies it + plugin config
+      # into the native project. Regenerates the git-ignored generated pieces (assets/public,
+      # capacitor.config.json, capacitor-cordova-android-plugins).
+      - name: Build web assets and sync Capacitor
+        run: pnpm cap:sync
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Locate APK
+        id: apk
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          [ -z "$APK" ] && { echo "ERROR: no APK produced"; find android -name '*.apk'; exit 1; }
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: moku-android-${{ github.event.inputs.version || 'pr' }}-debug
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 7

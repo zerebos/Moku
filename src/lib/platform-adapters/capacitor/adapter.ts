@@ -93,6 +93,32 @@ export class CapacitorAdapter implements PlatformAdapter {
   async migrateDownloads(_src: string, _dst: string): Promise<void> {}
   async getAutoBackupDir(): Promise<string> { return '' }
 
+  async fetchImage(url: string, headers: Record<string, string>): Promise<Blob> {
+    // Images from a secured Suwayomi server (basic/UI login) must be fetched with the Authorization
+    // header — a plain <img src> can't send one — and cross-origin to a remote host, so this must go
+    // through the native HTTP stack (like the Tauri HTTP plugin does on desktop) to bypass the
+    // webview's CORS + cleartext rules.
+    //
+    // We call CapacitorHttp directly rather than the patched window.fetch: the patched fetch is
+    // unreliable for binary `.blob()` responses (it corrupts bytes round-tripping through base64),
+    // which is exactly why authed images failed. Requesting responseType 'blob' returns the body as
+    // base64 on native, which we decode into a real Blob ourselves.
+    const { CapacitorHttp } = await import('@capacitor/core')
+    const res = await CapacitorHttp.request({ url, method: 'GET', headers, responseType: 'blob' })
+    if (res.status < 200 || res.status >= 300) throw new Error(`${res.status}`)
+
+    const contentType =
+      res.headers?.['content-type'] ?? res.headers?.['Content-Type'] ?? 'application/octet-stream'
+
+    // On web the plugin may hand back a Blob directly; on native it's a base64 string.
+    if (res.data instanceof Blob) return res.data
+
+    const binary = atob(res.data as string)
+    const bytes  = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    return new Blob([bytes], { type: contentType })
+  }
+
   async launchServer(_config: ServerLaunchConfig): Promise<void> {}
   async stopServer(): Promise<void> {}
   async getServerStatus(): Promise<'running' | 'stopped' | 'error'> { return 'stopped' }

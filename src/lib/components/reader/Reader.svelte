@@ -23,7 +23,10 @@
   import ReaderOverlay                                       from "$lib/components/reader/ReaderOverlay.svelte";
   import ReaderPresetPanel                                   from "$lib/components/reader/ReaderPresetPanel.svelte";
 
-  const useBlob = $derived((settingsState.settings.serverAuthMode ?? "NONE") !== "NONE");
+  // Mirror Thumbnail: use the live auth state (kept in sync by auth.ts) so interactive gate logins
+  // — which authenticate the API but don't persist serverAuthMode — still route pages through the
+  // authenticated blob path instead of a plain <img src> the mobile WebView can't authenticate.
+  const useBlob = $derived(appState.authMode !== "NONE");
 
   const effectiveReaderSettings = $derived.by(() => {
     const mangaId  = readerState.activeManga?.id;

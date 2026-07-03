@@ -3,7 +3,7 @@ import { initPlatformService, platformService } from '$lib/platform-service'
 import { probeServer, loginBasic, loginUI, verifyBasicAuth, configureAuth } from '$lib/core/auth'
 import { authVerifiedState }   from '$lib/state/auth.svelte'
 import { appState }            from '$lib/state/app.svelte'
-import { settingsState }       from '$lib/state/settings.svelte'
+import { settingsState, updateSettings } from '$lib/state/settings.svelte'
 
 const MAX_ATTEMPTS     = 40
 const WEB_MAX_ATTEMPTS = 1
@@ -144,12 +144,25 @@ export async function submitLogin(): Promise<void> {
   }
   boot.loginBusy  = true
   boot.loginError = null
+  const user = boot.loginUser.trim()
+  const pass = boot.loginPass.trim()
   try {
     if (appState.authMode === 'UI_LOGIN') {
-      await loginUI(boot.loginUser.trim(), boot.loginPass.trim())
+      await loginUI(user, pass)
     } else {
-      await verifyBasicAuth(boot.loginUser.trim(), boot.loginPass.trim())
+      await verifyBasicAuth(user, pass)
     }
+
+    // Persist the credentials so the login survives a relaunch, matching the Settings → Security
+    // flow exactly: the effective mode + username are always stored, but the password is only kept
+    // for BASIC_AUTH. UI_LOGIN is JWT-based — its password is never persisted; the user re-auths on
+    // next launch to mint fresh tokens (loginUI/verifyBasicAuth set appState.authMode above).
+    const mode = appState.authMode
+    const persistPass = mode === 'BASIC_AUTH' ? pass : ''
+    appState.authUser = user
+    appState.authPass = persistPass
+    updateSettings({ serverAuthMode: mode, serverAuthUser: user, serverAuthPass: persistPass })
+
     boot.loginRequired      = false
     boot.sessionExpired     = false
     boot.skipped            = false

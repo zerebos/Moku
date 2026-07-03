@@ -2,7 +2,9 @@
   import { settingsState, updateSettings } from '$lib/state/settings.svelte'
   import { platformService } from '$lib/platform-service'
 
-  const isTauri = platformService.platform === 'tauri'
+  const supportsServer  = platformService.isSupported('server-management')
+  const supportsWindow  = platformService.isSupported('native-window')
+  const supportsDiscord = platformService.isSupported('discord-rpc')
 
   import { selectPortal as _defaultPortal } from '$lib/core/ui/selectPortal'
   import type { Action } from 'svelte/action'
@@ -66,6 +68,7 @@
           <input class="s-input" value={settingsState.settings.serverUrl ?? 'http://localhost:4567'}
             oninput={(e) => updateSettings({ serverUrl: e.currentTarget.value })}
             placeholder="http://localhost:4567" spellcheck="false" />
+          {#if supportsServer}
           <button class="srv-adv-btn" class:open={serverAdvancedOpen}
             onclick={() => serverAdvancedOpen = !serverAdvancedOpen}
             title="Server launch options" aria-expanded={serverAdvancedOpen}>
@@ -73,10 +76,11 @@
               <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
+          {/if}
         </div>
       </div>
 
-      {#if isTauri}
+      {#if supportsServer}
       <label class="s-row">
         <div class="s-row-info"><span class="s-label">Auto-start server</span><span class="s-desc">Launch tachidesk-server when Moku opens</span></div>
         <button role="switch" aria-checked={settingsState.settings.autoStartServer} aria-label="Auto-start server"
@@ -96,7 +100,7 @@
       </label>
       {/if}
 
-      {#if serverAdvancedOpen}
+      {#if serverAdvancedOpen && supportsServer}
         <div class="srv-adv-panel">
           <div class="srv-adv-row">
             <div class="s-row-info">
@@ -120,6 +124,7 @@
     </div>
   </div>
 
+  {#if supportsWindow}
   <div class="s-section">
     <p class="s-section-title">Window</p>
     <div class="s-section-body">
@@ -133,6 +138,7 @@
       </div>
     </div>
   </div>
+  {/if}
 
   <div class="s-section">
     <p class="s-section-title">Inactivity</p>
@@ -156,6 +162,7 @@
     </div>
   </div>
 
+  {#if supportsDiscord}
   <div class="s-section">
     <p class="s-section-title">Integrations</p>
     <div class="s-section-body">
@@ -165,6 +172,7 @@
       </label>
     </div>
   </div>
+  {/if}
 
   <div class="s-section">
     <p class="s-section-title">Animations</p>
