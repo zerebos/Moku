@@ -28,7 +28,11 @@ Two things make talking to a remote Suwayomi server work from the Android WebVie
 
 1. **CapacitorHttp** is enabled in `capacitor.config.ts`, which patches `window.fetch` to issue
    requests through the native HTTP stack. This is how the GraphQL API calls avoid the WebView's
-   CORS restrictions.
+   CORS restrictions. Images from a secured server (basic/UI login) are fetched with the
+   `Authorization` header via `CapacitorHttp.request({ responseType: 'blob' })` — the same
+   "backend-proxies-the-image" approach the Tauri HTTP plugin uses on desktop (a plain `<img src>`
+   can't send an auth header). We call the plugin directly there rather than the patched `fetch`,
+   whose `.blob()` handling corrupts binary data.
 2. **Cleartext traffic** is enabled (`android:usesCleartextTraffic="true"` in the manifest, plus
    `allowMixedContent`) so plain-`http://` LAN servers — and the `<img>` requests for pages and
    thumbnails — are not blocked. If you only ever connect over HTTPS you can remove this.
