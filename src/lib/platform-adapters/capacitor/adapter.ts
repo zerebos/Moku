@@ -104,19 +104,42 @@ export class CapacitorAdapter implements PlatformAdapter {
     // which is exactly why authed images failed. Requesting responseType 'blob' returns the body as
     // base64 on native, which we decode into a real Blob ourselves.
     const { CapacitorHttp } = await import('@capacitor/core')
-    const res = await CapacitorHttp.request({ url, method: 'GET', headers, responseType: 'blob' })
-    if (res.status < 200 || res.status >= 300) throw new Error(`${res.status}`)
+    try {
+      const res = await CapacitorHttp.request({ url, method: 'GET', headers, responseType: 'blob' })
 
-    const contentType =
-      res.headers?.['content-type'] ?? res.headers?.['Content-Type'] ?? 'application/octet-stream'
+      // TEMP DEBUG — remove once mobile image loading is confirmed. Logs the shape of the native
+      // response so we can see why authed images fail (status, data type, a sample of the body).
+      const data: unknown = res.data
+      const dataType = data instanceof Blob ? `Blob(${data.size})` : typeof data
+      const dataLen  = typeof data === 'string' ? data.length : data instanceof Blob ? data.size : -1
+      const sample   = typeof data === 'string' ? data.slice(0, 32) : null
+      console.warn('[moku:fetchImage]', JSON.stringify({
+        url,
+        status:      res.status,
+        sentAuth:    !!headers.Authorization,
+        dataType,
+        dataLen,
+        sample,
+        headerKeys:  Object.keys(res.headers ?? {}),
+        contentType: res.headers?.['content-type'] ?? res.headers?.['Content-Type'] ?? null,
+      }))
 
-    // On web the plugin may hand back a Blob directly; on native it's a base64 string.
-    if (res.data instanceof Blob) return res.data
+      if (res.status < 200 || res.status >= 300) throw new Error(`${res.status}`)
 
-    const binary = atob(res.data as string)
-    const bytes  = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-    return new Blob([bytes], { type: contentType })
+      const contentType =
+        res.headers?.['content-type'] ?? res.headers?.['Content-Type'] ?? 'application/octet-stream'
+
+      // On web the plugin may hand back a Blob directly; on native it's a base64 string.
+      if (data instanceof Blob) return data
+
+      const binary = atob(data as string)
+      const bytes  = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      return new Blob([bytes], { type: contentType })
+    } catch (e) {
+      console.error('[moku:fetchImage] FAILED', url, e)
+      throw e
+    }
   }
 
   async launchServer(_config: ServerLaunchConfig): Promise<void> {}
